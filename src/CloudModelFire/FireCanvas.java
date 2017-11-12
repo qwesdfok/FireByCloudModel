@@ -7,16 +7,17 @@ import java.awt.event.ComponentEvent;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 public class FireCanvas extends JPanel
 {
-	private double ex = 0.0, en = 0.5, he = 0.05;
+	private double ex = 0.0, en = 1, he = 0.5;
 	private CloudModel cloudModel = new CloudModel(ex, en, he);
 	private final double scale = 10.0;
 	private final int moveY = 100;
 	private int x0, y0, width, height;
-	private int size = 100;
+	private Random random = new Random();
 
 	public FireCanvas()
 	{
@@ -59,39 +60,40 @@ public class FireCanvas extends JPanel
 			point.value = dropPoint.value;
 			return point;
 		}).collect(Collectors.toList());
-		int[] min = transformDropToPoint(new DropPoint(ex - 3 * en, 0.0));
-		int minx = min[0] + x0;
-		int miny = min[1] + y0;
+		PixelPoint min = transformDropToPoint(new DropPoint(ex - 3 * en, 0.0));
 		g.setColor(Color.BLACK);
-		g.drawOval(minx, miny, 50, 50);
+		g.drawOval(min.getIntX(), min.getIntY(), 50, 50);
 		for (int i = 0; i < dropList.size(); i++)
 		{
-			int[] point = transformDropToPoint(dropList.get(i));
-			int[] reverse = transformDropToPoint(reverseList.get(i));
-			int mx1 = point[0] + x0;
-			int my1 = point[1] + y0;
-			int mx2 = reverse[0] + x0;
-			int my2 = reverse[1] + y0;
-			g.setColor(generateFireColor(my1, y0, miny));
-			g.drawOval(mx1, my1, 5, 5);
-			g.drawOval(mx2, my2, 5, 5);
+			PixelPoint point = transformDropToPoint(dropList.get(i));
+			PixelPoint mirror = transformDropToPoint(reverseList.get(i));
+			g.setColor(generateFireColor(point.getIntY(), y0, min.getIntY()));
+			g.drawOval(point.getIntX(), point.getIntY(), 5, 5);
+			g.drawOval(mirror.getIntX(), mirror.getIntY(), 5, 5);
+			int diff = Math.abs(mirror.getIntX() - point.getIntX());
+			if (diff > 20)
+			{
+				int ax = 0;
+				while (ax < diff)
+				{
+					g.drawOval(Math.min(mirror.getIntX(), point.getIntX()) + ax, point.getIntY(), 5, 5);
+					ax += random.nextInt(50) + 10;
+				}
+			}
 		}
 	}
 
-	private int[] transformDropToPoint(DropPoint dropPoint)
+	private PixelPoint transformDropToPoint(DropPoint dropPoint)
 	{
-		int[] point = new int[2];
+		PixelPoint point = PixelPoint.parsePoint(dropPoint);
 		double xZoom = (width * 1.0 / scale);
 		double yZoom = (height - y0) * 4.0 / 5;
-		int y = (int) (dropPoint.value * xZoom);
-		int x = (int) (dropPoint.belong * yZoom);
-		y -= moveY;
-		if (x > width)
-			x = width;
-		if (y > height)
-			y = height;
-		point[0] = x;
-		point[1] = y;
+		point.rotate(Math.PI / 2)
+				.zoom(xZoom, yZoom)
+				.move(0, -moveY)
+				.move(x0, y0)
+				.minBorder(0.0, 0.0)
+				.maxBorder(width, height);
 		return point;
 	}
 
