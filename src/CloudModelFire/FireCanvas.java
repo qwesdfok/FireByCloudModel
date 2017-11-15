@@ -4,28 +4,23 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.util.Arrays;
-import java.util.Collections;
+import java.io.IOException;
 import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
 
 public class FireCanvas extends JPanel
 {
-	private double ex = 0.0, en = 1, he = 0.5;
+	private double ex = 1.0, en = 0.05, he = 0.001;
 	private CloudModel cloudModel = new CloudModel(ex, en, he);
-	private final double scale = 10.0;
-	private final int moveY = 100;
+	private static final int moveY = 90;
 	private int x0, y0, width, height;
-	private Random random = new Random();
+	private FireInfo fireInfo;
+	private ImageIcon candleStatic;
 
 	public FireCanvas()
 	{
 		Dimension dimension = this.getSize();
 		x0 = dimension.width / 2;
-		y0 = dimension.height - 100;
-		if (y0 < 0)
-			y0 = dimension.height * 2 / 3;
+		y0 = dimension.height * 2 / 3;
 		width = dimension.width;
 		height = dimension.height;
 		this.addComponentListener(new ComponentAdapter()
@@ -36,11 +31,27 @@ public class FireCanvas extends JPanel
 				width = e.getComponent().getWidth();
 				height = e.getComponent().getHeight();
 				x0 = width / 2;
-				y0 = height - 100;
-				if (y0 < 0)
-					y0 = height * 2 / 3;
+				y0 = height * 2 / 3;
+				if (fireInfo != null && fireInfo.getRandomGenerator() instanceof FireInfo.RemoveRedundantRandom)
+				{
+					((FireInfo.RemoveRedundantRandom) fireInfo.getRandomGenerator()).resize(width, height);
+				}
 			}
 		});
+		try
+		{
+			fireInfo = new FireInfo(this.getClass().getResource("/fire.png"));
+			fireInfo.loadImage();
+			FireInfo.RandomGenerator generator = new FireInfo.AverageRandom();
+			FireInfo.FixAndRandom fix = new FireInfo.FixAndRandom(generator, 0.5);
+			FireInfo.RemoveRedundantRandom remove = new FireInfo.RemoveRedundantRandom(fix, width, height, 4);
+			fireInfo.setRandomGenerator(remove);
+			candleStatic = new ImageIcon(this.getClass().getResource("/static.png"));
+		} catch (IOException e)
+		{
+			e.printStackTrace();
+			System.out.println("加载文件失败，请确保资源文件在正确的目录中");
+		}
 	}
 
 	@Override
@@ -49,86 +60,17 @@ public class FireCanvas extends JPanel
 		super.paintComponent(g);
 		g.setColor(Color.BLACK);
 		g.fillRect(0, 0, width, height);
-		g.drawLine(0, y0, width, y0);
-		g.drawLine(x0, 0, x0, height);
-		DropPoint[] dropPoints = FunctionLib.GenerateCloudDrop(cloudModel, 5000);
-		List<DropPoint> dropList = Arrays.asList(dropPoints);
-		Collections.sort(dropList);
-		List<DropPoint> reverseList = dropList.stream().map(dropPoint -> {
-			DropPoint point = new DropPoint();
-			point.belong = -dropPoint.belong;
-			point.value = dropPoint.value;
-			return point;
-		}).collect(Collectors.toList());
-		PixelPoint min = transformDropToPoint(new DropPoint(ex - 3 * en, 0.0));
-		g.setColor(Color.BLACK);
-		g.drawOval(min.getIntX(), min.getIntY(), 50, 50);
-		for (int i = 0; i < dropList.size(); i++)
+		List<PixelPoint> points = fireInfo.generateFirePixel(5000);
+		DropPoint dropPoints = cloudModel.generateCloudDrop(1)[0];
+		for (PixelPoint point : points)
 		{
-			PixelPoint point = transformDropToPoint(dropList.get(i));
-			PixelPoint mirror = transformDropToPoint(reverseList.get(i));
-			g.setColor(generateFireColor(point.getIntY(), y0, min.getIntY()));
-			g.drawOval(point.getIntX(), point.getIntY(), 5, 5);
-			g.drawOval(mirror.getIntX(), mirror.getIntY(), 5, 5);
-			int diff = Math.abs(mirror.getIntX() - point.getIntX());
-			if (diff > 20)
-			{
-				int ax = 0;
-				while (ax < diff)
-				{
-					g.drawOval(Math.min(mirror.getIntX(), point.getIntX()) + ax, point.getIntY(), 5, 5);
-					ax += random.nextInt(50) + 10;
-				}
-			}
+			g.setColor(new Color(point.r, point.g, point.b, point.a));
+			point.move(-fireInfo.width / 2.0, -fireInfo.height)
+					.zoom(1.0, dropPoints.value)
+					.move(fireInfo.width / 2.0, fireInfo.height)
+					.move(x0 - fireInfo.width / 2, height - fireInfo.height - moveY);
+			g.fillOval(point.getIntX(), point.getIntY(), 5, 5);
 		}
+		g.drawImage(candleStatic.getImage(), x0 - candleStatic.getIconWidth() / 2, height - candleStatic.getIconHeight(), candleStatic.getImageObserver());
 	}
-
-	private PixelPoint transformDropToPoint(DropPoint dropPoint)
-	{
-		PixelPoint point = PixelPoint.parsePoint(dropPoint);
-		double xZoom = (width * 1.0 / scale);
-		double yZoom = (height - y0) * 4.0 / 5;
-		point.rotate(Math.PI / 2)
-				.zoom(xZoom, yZoom)
-				.move(0, -moveY)
-				.move(x0, y0)
-				.minBorder(0.0, 0.0)
-				.maxBorder(width, height);
-		return point;
-	}
-
-	private static Color generateFireColor(int height, int y0, int minHeight)
-	{
-		if (minHeight <= 0)
-			minHeight = 1;
-		if (height >= y0)
-			height = y0 - 1;
-		int delta = height - minHeight;
-		if (delta < 0)
-			delta = 0;
-		int changeToBlue = (y0 - minHeight) * 9 / 10;
-		int changeToOrigin = (y0 - minHeight) * 7 / 10;
-		float r, g, b;
-		if (delta > changeToBlue)
-		{
-			r = (delta - changeToBlue) * 1.0f / (y0 - changeToBlue + 1.0f);
-			g = r;
-			b = 1.0f;
-		} else if (delta > changeToOrigin && delta <= changeToBlue)
-		{
-			r = 1.0f - (delta - changeToOrigin) * 1.0f / (changeToBlue - changeToOrigin + 1.0f);
-			g = r;
-			b = 1.0f;
-		} else
-		{
-			r = 1.0f;
-			g = 0.5f + (delta) * 0.5f / (changeToOrigin);
-			b = (delta) * 1.0f / (changeToOrigin);
-		}
-		if (r > 1.0f || b > 1.0f || g > 1.0f || r < 0.0f || b < 0.0f || g < 0.0f)
-			System.out.println("error");
-		Color color = new Color(r, g, b);
-		return color;
-	}
-
 }

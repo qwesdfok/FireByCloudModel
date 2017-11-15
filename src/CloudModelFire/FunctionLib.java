@@ -41,22 +41,4 @@ public class FunctionLib
 		model.he = Math.sqrt(variance * variance - en * en);
 		return model;
 	}
-
-	public static DropPoint[] GenerateCloudDrop(CloudModel model, int count)
-	{
-		DropPoint[] result = new DropPoint[count];
-		for (int i = 0; i < count; i++)
-		{
-			double gaussRandom1 = gaussRandom();
-			double gaussRandom2 = gaussRandom();
-			double iEn = gaussRandom1 * model.he + model.en;
-			double iX = gaussRandom2 * iEn + model.ex;
-			double iBelong = gaussKernel(iX, model.ex, iEn);
-			DropPoint point = new DropPoint();
-			point.value=iX;
-			point.belong = iBelong;
-			result[i] = point;
-		}
-		return result;
-	}
 }

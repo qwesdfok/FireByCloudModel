@@ -2,7 +2,13 @@ package CloudModelFire;
 
 public class PixelPoint
 {
+	public interface SingleMap
+	{
+		double singleMap(double input);
+	}
+
 	public double x, y;
+	public float r,g,b,a;
 
 	public PixelPoint()
 	{
@@ -56,6 +62,13 @@ public class PixelPoint
 			x = xBorder;
 		if (y > yBorder)
 			y = yBorder;
+		return this;
+	}
+
+	public PixelPoint singleMap(SingleMap xMap, SingleMap yMap)
+	{
+		x = xMap.singleMap(x);
+		y = yMap.singleMap(y);
 		return this;
 	}
 
