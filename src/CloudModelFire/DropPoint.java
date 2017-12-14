@@ -24,6 +24,6 @@ public class DropPoint implements Comparable<DropPoint>
 	@Override
 	public String toString()
 	{
-		return value + ", " + belong ;
+		return value + ", " + belong;
 	}
 }

@@ -19,6 +19,7 @@ public class CloudModel
 		this.en = en;
 		this.he = he;
 	}
+
 	public DropPoint[] generateCloudDrop(int count)
 	{
 		DropPoint[] result = new DropPoint[count];
@@ -30,10 +31,20 @@ public class CloudModel
 			double iX = gaussRandom2 * iEn + ex;
 			double iBelong = gaussKernel(iX, ex, iEn);
 			DropPoint point = new DropPoint();
-			point.value=iX;
+			point.value = iX;
 			point.belong = iBelong;
 			result[i] = point;
 		}
 		return result;
+	}
+
+	public void validate()
+	{
+		if (ex < 0)
+			ex = 0;
+		if (en < 0)
+			en = 0;
+		if (he < 0)
+			he = 0;
 	}
 }

@@ -6,4 +6,6 @@
 <li>PixelPoint为存储屏幕上的点的数据，使用时用getIntX/Y</li>
 <li>FireCanvas为绘制火焰的画布</li>
 <li>FunctionLib为数学计算公式库</li>
+<li>UITools为GUI的工具库</li>
+<li>FireInfo存储火焰像素信息</li>
 </ul>

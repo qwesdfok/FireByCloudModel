@@ -11,6 +11,9 @@ import java.util.stream.Collectors;
 
 public class FireInfo
 {
+	/**
+	 * 该接口用于产生随机的像素点（粒子），以至于产生动态效果
+	 */
 	public interface RandomGenerator
 	{
 		/**
@@ -22,6 +25,9 @@ public class FireInfo
 		List<PixelPoint> random(int count);
 	}
 
+	/**
+	 * 通过均匀分布形成像素点
+	 */
 	static class AverageRandom implements RandomGenerator
 	{
 		Random random = new Random();
@@ -38,6 +44,9 @@ public class FireInfo
 		}
 	}
 
+	/**
+	 * 部分随机，以减少随机像素点的产生次数
+	 */
 	static class FixAndRandom implements RandomGenerator
 	{
 		public double fixRatio;
@@ -46,6 +55,8 @@ public class FireInfo
 
 		public FixAndRandom(RandomGenerator source, double fixRatio)
 		{
+			if (fixRatio > 0 || fixRatio < 0)
+				fixRatio = 0.6;
 			this.fixRatio = fixRatio;
 			this.source = source;
 		}
@@ -63,6 +74,9 @@ public class FireInfo
 		}
 	}
 
+	/**
+	 * 删除绘图时重合的像素点，以减少绘图压力l
+	 */
 	static class RemoveRedundantRandom implements RandomGenerator
 	{
 		private RandomGenerator source;
@@ -222,9 +236,10 @@ public class FireInfo
 				}
 			}
 			int color = rowInfo.raw[point.getIntX()];
+			//数据格式ARGB
 			point.a = ((color & 0xff000000) >>> 24) / 256.0f;
-			point.r = ((color & 0x00ff0000) >> 16) / 256.0f;
-			point.g = ((color & 0x0000ff00) >> 8) / 256.0f;
+			point.r = ((color & 0x00ff0000) >>> 16) / 256.0f;
+			point.g = ((color & 0x0000ff00) >>> 8) / 256.0f;
 			point.b = (color & 0x000000ff) / 256.0f;
 		}
 		return points;
